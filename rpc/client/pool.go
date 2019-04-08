@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"github.com/DGHeroin/Niggurath/rpc/core"
 	"log"
 	"sync"
 	"time"
@@ -10,15 +9,15 @@ import (
 
 type worker struct {
 	client        Client
-	ch            *chan core.Request
+	ch            *chan *workerRequest
 	isRunning     bool
 	wg            *sync.WaitGroup
 	remoteAddress string
 	retryDelay    int
-	connected bool
+	connected     bool
 }
 
-func (w *worker) doConnect() error{
+func (w *worker) doConnect() error {
 	if err := w.client.Connect(w.remoteAddress); err != nil {
 		log.Printf("rpc connect error: %v", err)
 		w.retryDelay = 1
@@ -55,8 +54,9 @@ func (w *worker) start(remote string) {
 		// handle message
 		timeout := time.After(time.Millisecond * 100) // 100ms timeout
 		select {
-		case msg := <-*w.ch:
-			w.client.ExecuteSingleEvent(context.Background(), msg.Name, msg.Message)
+		case req := <-*w.ch:
+			req.response, req.err = w.client.ExecuteSingleEvent(context.Background(), req.name, req.message)
+			req.wg.Done()
 		case <-timeout: // wakeup but do nothing
 			break
 		}
@@ -64,8 +64,16 @@ func (w *worker) start(remote string) {
 	w.wg.Done()
 }
 
+type workerRequest struct {
+	name     string
+	message  string
+	response string
+	err      error
+	wg sync.WaitGroup
+}
+
 type Pool struct {
-	ch      chan core.Request
+	ch      chan *workerRequest
 	workers []*worker
 	isInit  bool
 	wg      sync.WaitGroup
@@ -75,7 +83,7 @@ func (p *Pool) NewWorker(num int, remote string) {
 	if p.isInit {
 		return
 	}
-	p.ch = make(chan core.Request, num)
+	p.ch = make(chan *workerRequest, num)
 	for i := 0; i < num; i++ {
 		p.wg.Add(1)
 		w := worker{ch: &p.ch, wg: &p.wg}
@@ -85,8 +93,16 @@ func (p *Pool) NewWorker(num int, remote string) {
 	p.isInit = true
 }
 
-func (p *Pool) Send(name, message string) {
-	p.ch <- core.Request{Name: name, Message: message}
+func (p *Pool) Send(name, message string) (result string, err error) {
+	var (
+		request = &workerRequest{name:name, message:message, err:nil}
+	)
+	request.wg.Add(1)
+	p.ch <- request
+	request.wg.Wait()
+	result = request.response
+	err = request.err
+	return
 }
 func (p *Pool) Close() {
 	for _, w := range p.workers {
