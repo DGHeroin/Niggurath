@@ -51,3 +51,27 @@ func (c *Client) Execute(ctx context.Context, name string, message string) (msg 
     msg = response.Message
     return
 }
+
+func (c *Client) ExecuteSingleEvent(ctx context.Context, name string, message string) (msg string, err error) {
+    if !c.ok {
+        err = c.Connect(c.remote)
+        if err != nil {
+            log.Println("Try auto connect failed")
+            return
+        }
+    }
+
+    var (
+        request = &core.Request{Name:name,Message:message}
+        response = new(core.ResponseSingleEvent)
+    )
+
+    err = c.client.Call(core.SingleHandlerName, request, response)
+    if err != nil {
+        c.ok = false
+        return
+    }
+    c.ok = true
+    msg = response.Message
+    return
+}

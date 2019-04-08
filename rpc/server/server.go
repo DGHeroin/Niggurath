@@ -17,7 +17,7 @@ func (s *Server) Serve(address string) (err error) {
 
 	s.listener, err = net.Listen("tcp", address)
 	if err != nil {
-		log.Println("start falied:", err)
+		log.Println("start failed:", err)
 		return err
 	}
 	for {
@@ -25,6 +25,13 @@ func (s *Server) Serve(address string) (err error) {
 		if err != nil {
 			return err
 		}
-		go jsonrpc.ServeConn(conn)
+		go jsonrpc.ServeConn(conn) // string rpc
+	}
+}
+
+func (s *Server) Close() {
+	if s.listener != nil {
+		s.listener.Close()
+		s.listener = nil
 	}
 }
