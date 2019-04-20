@@ -24,6 +24,15 @@ func (c *Client) Connect(remote string) (err error) {
     return nil
 }
 
+func (c *Client) Clone() (*Client, error) {
+    cli := &Client{}
+    if err := cli.Connect(c.remote); err == nil {
+        return cli, nil
+    } else {
+        return nil, err
+    }
+}
+
 func (c *Client) Close() (err error) {
     return c.client.Close()
 }
