@@ -82,7 +82,7 @@ func (e *Manager) DispatchSingleEvent(name string, message string) (result strin
     return
 }
 
-func (e*Manager) AddSingleListener(name string, listener Listener) {
+func (e *Manager) AddSingleListener(name string, listener Listener) {
     e.mutexSingle.Lock()
     defer e.mutexSingle.Unlock()
     e.singleListener[name] = listener
