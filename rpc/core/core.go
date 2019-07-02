@@ -27,6 +27,11 @@ const SingleHandlerName = "Handler.ExecuteSingleEvent"
 type Handler struct {}
 
 func (h *Handler) Execute(req Request, res *Response) (err error) {
+    defer func() {
+        if e := recover(); e != nil {
+            log.Println(e)
+        }
+    }()
     if req.Name == "" {
         err = fmt.Errorf("A name must be specified")
         return
@@ -46,6 +51,11 @@ func (h *Handler) Execute(req Request, res *Response) (err error) {
 }
 
 func (h *Handler) ExecuteSingleEvent(req Request, res *ResponseSingleEvent) (err error) {
+    defer func() {
+        if e := recover(); e != nil {
+            log.Println(e)
+        }
+    }()
     if req.Name == "" {
         err = fmt.Errorf("A name must be specified")
         return

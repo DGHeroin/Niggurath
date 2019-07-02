@@ -50,7 +50,7 @@ func TestEventQueueQPS(t *testing.T) {
 
 func TestSingleListenerQPS(t *testing.T) {
     handler := Handler {}
-    event.GetEventManager().AddSingleListener("rpc.test.single", &handler)
+    event.GetEventManager().AddListener("rpc.test.single", &handler)
     mgr := event.GetEventManager()
     isRunning = true
     producer := func() {

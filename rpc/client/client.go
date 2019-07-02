@@ -1,6 +1,7 @@
 package client
 
 import (
+    "fmt"
     "github.com/DGHeroin/Niggurath/rpc/core"
     "net/rpc"
     "net/rpc/jsonrpc"
@@ -46,6 +47,11 @@ func (c *Client) Execute(ctx context.Context, name string, message string) (msg 
         }
     }
 
+    if c.client == nil {
+        err = fmt.Errorf("execute client nil")
+        return
+    }
+
     var (
         request = &core.Request{Name:name,Message:message}
         response = new(core.Response)
@@ -68,6 +74,10 @@ func (c *Client) ExecuteSingleEvent(ctx context.Context, name string, message st
             log.Println("Try auto connect failed")
             return
         }
+    }
+    if c.client == nil {
+        err = fmt.Errorf("client nil")
+        return
     }
 
     var (

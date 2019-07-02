@@ -68,7 +68,7 @@ func TestRPC(t *testing.T) {
 
 func TestRPCSingleEvent(t *testing.T) {
     handler := EchoHandler{}
-    event.GetEventManager().AddSingleListener("echo.handler", &handler)
+    event.GetEventManager().AddListener("echo.handler", &handler)
     isRunning = true
     srv := server.Server{}
     defer srv.Close()

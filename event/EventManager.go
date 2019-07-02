@@ -1,27 +1,46 @@
 package event
 
 import (
-    "sync"
     "fmt"
+    "sync"
 )
 
 var (
-    mgr = Manager{listeners:make(map[string][]Listener), singleListener:make(map[string]Listener)}
+    mgr                   *Manager
+    defaultMgrMutex       sync.Mutex
     ErrorListenerNotExist = fmt.Errorf("listener not found")
 )
 
 type Manager struct {
-    mutex sync.RWMutex
-    listeners map[string] []Listener
-    mutexSingle sync.RWMutex
-    singleListener map[string] Listener
+    mutex          sync.RWMutex
+    listeners      map[string][]Listener
+    mutexSingle    sync.RWMutex
+    singleListener map[string]Listener
+    singleFunc     map[string]HandleFunc
 }
 type Listener interface {
     OnMessage(message string) (result string, err error)
 }
 
+type HandleFunc func(message string) (result string, err error)
+
 func GetEventManager() *Manager {
-    return &mgr
+    if mgr == nil {
+        defaultMgrMutex.Lock()
+        if mgr == nil {
+            mgr = NewManager()
+        }
+        defaultMgrMutex.Unlock()
+    }
+    return mgr
+}
+
+func NewManager() *Manager {
+    return &Manager{
+        listeners:      make(map[string][]Listener),
+        singleListener: make(map[string]Listener),
+        singleFunc:     make(map[string]HandleFunc),
+    }
 }
 
 func (e *Manager) DispatchEvents(name string, message string) (result []string, err error) {
@@ -43,7 +62,7 @@ func (e *Manager) DispatchEvents(name string, message string) (result []string, 
     return
 }
 
-func (e*Manager) AddListeners(name string, listener Listener) {
+func (e *Manager) AddListeners(name string, listener Listener) {
     e.mutex.Lock()
     defer e.mutex.Unlock()
     if listeners, ok := e.listeners[name]; ok {
@@ -56,7 +75,7 @@ func (e*Manager) AddListeners(name string, listener Listener) {
     e.listeners[name] = listeners
 }
 
-func (e*Manager) RemoveListeners(name string, listener Listener) {
+func (e *Manager) RemoveListeners(name string, listener Listener) {
     e.mutex.Lock()
     defer e.mutex.Unlock()
     if listeners, ok := e.listeners[name]; ok {
@@ -71,25 +90,40 @@ func (e*Manager) RemoveListeners(name string, listener Listener) {
 }
 
 func (e *Manager) DispatchSingleEvent(name string, message string) (result string, err error) {
-   e.mutexSingle.RLock()
-   defer e.mutexSingle.RUnlock()
+    e.mutexSingle.RLock()
+    defer e.mutexSingle.RUnlock()
+    if cb , ok := e.singleFunc[name]; ok {
+        return cb(message)
+    }
+
     if listener, ok := e.singleListener[name]; ok {
         return listener.OnMessage(message)
-    } else {
-        err = ErrorListenerNotExist
-        return
     }
+
+    err = ErrorListenerNotExist
     return
 }
-
-func (e *Manager) AddSingleListener(name string, listener Listener) {
+// Event Listener
+func (e *Manager) AddListener(name string, listener Listener) {
     e.mutexSingle.Lock()
     defer e.mutexSingle.Unlock()
     e.singleListener[name] = listener
 }
 
-func (e*Manager) RemoveSingleListener(name string) {
+func (e *Manager) RemoveListener(name string) {
     e.mutexSingle.Lock()
     defer e.mutexSingle.Unlock()
-    delete( e.singleListener, name)
+    delete(e.singleListener, name)
+}
+// Func Handler
+func (e *Manager) AddFunc(name string, cb HandleFunc) {
+    e.mutexSingle.Lock()
+    defer e.mutexSingle.Unlock()
+    e.singleFunc[name] = cb
+}
+
+func (e *Manager) RemoveFunc(name string) {
+    e.mutexSingle.Lock()
+    defer e.mutexSingle.Unlock()
+    delete(e.singleFunc, name)
 }

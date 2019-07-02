@@ -40,7 +40,7 @@ var (
 )
 
 func runServer() {
-    event.GetEventManager().AddSingleListener("h", &Handler{})
+    event.GetEventManager().AddListener("h", &Handler{})
     go startTestServer()
 }
 
